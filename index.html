@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>同人活動 収支・経費可視化シートメーカー</title>
+<style>
+  :root {
+    --bg: #f4f5f9;
+    --panel: #ffffff;
+    --border: #dfe2ef;
+    --text: #262b3d;
+    --muted: #6b7189;
+    --accent: #00897b;
+    --accent-dark: #00695c;
+    --ok-bg: #e0f2f1;
+    --locked: #a7abc0;
+    --best: #fff4d6;
+    --warn-bg: #fdecea;
+    --warn-text: #a13d2e;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+  }
+  header {
+    background: linear-gradient(135deg, #00897b, #00695c);
+    color: #fff;
+    padding: 32px 20px 26px;
+    text-align: center;
+  }
+  header h1 { margin: 0 0 8px; font-size: 1.55rem; }
+  header p { margin: 0; opacity: .92; font-size: .95rem; }
+  .disclaimer {
+    max-width: 800px; margin: 18px auto 0;
+    background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.4);
+    border-radius: 8px; padding: 10px 14px; font-size: .8rem; text-align: left;
+  }
+  main { max-width: 900px; margin: 0 auto; padding: 24px 16px 60px; }
+  section.card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px; margin-bottom: 20px;
+  }
+  section.card h2 { margin: 0 0 4px; font-size: 1.05rem; display: flex; align-items: center; gap: 8px; }
+  section.card .desc { color: var(--muted); font-size: .85rem; margin: 0 0 14px; }
+  .badge { display: inline-block; font-size: .7rem; padding: 2px 8px; border-radius: 999px; background: #eee; color: #4a4a4a; font-weight: bold; }
+  .badge.pro { background: #fff1cc; color: #8a6100; }
+
+  label.field { display: block; margin-bottom: 12px; }
+  label.field .lbl { font-size: .83rem; font-weight: bold; }
+  label.field input, label.field select, label.field textarea {
+    width: 100%; margin-top: 5px; padding: 8px 10px;
+    border: 1px solid var(--border); border-radius: 8px;
+    font-size: .92rem; font-family: inherit; background: #fbfbfe;
+  }
+  label.field textarea { resize: vertical; min-height: 50px; }
+  label.check { display: flex; align-items: flex-start; gap: 8px; font-size: .87rem; margin-bottom: 10px; }
+  label.check input { width: auto; margin-top: 3px; }
+  .row2 { display: flex; gap: 12px; flex-wrap: wrap; }
+  .row2 > * { flex: 1; min-width: 180px; }
+  .row3 { display: flex; gap: 12px; flex-wrap: wrap; }
+  .row3 > * { flex: 1; min-width: 140px; }
+  .row4 { display: flex; gap: 10px; flex-wrap: wrap; }
+  .row4 > * { flex: 1; min-width: 120px; }
+
+  .item-tab-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .item-tab { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border); background: #fbfbfe; cursor: pointer; font-size: .85rem; min-height: 44px; display: flex; align-items: center; }
+  .item-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .note-box {
+    background: #f6f6fb; border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 14px; font-size: .78rem; color: var(--muted); margin: 10px 0;
+  }
+  .warn-box {
+    background: var(--warn-bg); color: var(--warn-text); border: 1px solid #f0c4bd;
+    border-radius: 8px; padding: 10px 14px; font-size: .82rem; margin: 10px 0;
+  }
+
+  table.summary { width: 100%; border-collapse: collapse; font-size: .86rem; margin-top: 4px; }
+  table.summary th, table.summary td { padding: 8px 10px; border: 1px solid var(--border); text-align: left; vertical-align: top; }
+  table.summary th { background: #f6f6fb; color: var(--muted); font-weight: bold; font-size: .8rem; }
+  table.summary td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  table.summary tr.total td { font-weight: bold; background: var(--ok-bg); }
+
+  .amount-box {
+    background: var(--ok-bg); border-radius: 10px; padding: 16px 18px; margin-top: 14px;
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+  }
+  .amount-box .label { font-size: .85rem; color: var(--muted); }
+  .amount-box .value { font-size: 1.5rem; font-weight: bold; color: var(--accent-dark); }
+
+  .locked-panel {
+    border: 1px dashed var(--locked); border-radius: 10px; padding: 18px; text-align: center; color: var(--muted); background: #fafafd;
+  }
+  .locked-panel .feat-list { text-align: left; max-width: 480px; margin: 12px auto; font-size: .85rem; padding-left: 1.2em; }
+  .buy-btn {
+    display: inline-block; margin-top: 10px; background: var(--accent); color: #fff; font-weight: bold;
+    padding: 10px 22px; border-radius: 999px; text-decoration: none; font-size: .9rem;
+  }
+  .buy-btn:hover { background: var(--accent-dark); }
+
+  .btn-secondary {
+    background: #fff; border: 1px solid var(--border); color: var(--text);
+    padding: 8px 14px; border-radius: 8px; font-size: .82rem; cursor: pointer; min-height: 44px;
+  }
+  .btn-row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+
+  .doc-box { background: #fbfbfe; border: 1px solid var(--border); border-radius: 10px; padding: 18px; margin-top: 14px; font-size: .87rem; white-space: pre-wrap; }
+
+  footer { max-width: 900px; margin: 0 auto; padding: 0 16px 40px; font-size: .76rem; color: var(--muted); }
+  footer .updated { font-weight: bold; }
+
+  @media print {
+    body { background: #fff; }
+    header, #event-input-section, #home-section, #pro-section { display: none !important; }
+    #summary-section, #doc-section { border: none; padding: 0; }
+    #summary-section .desc, #doc-section .desc, #printBtn { display: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>同人活動 収支・経費可視化シートメーカー</h1>
+  <p>即売会の売上・経費を入れるだけで、年間の収支を自分用に集計・可視化 — 確定申告の下準備に</p>
+  <div class="disclaimer">
+    ⚠️ 本ツールは、入力された金額を機械的に合計・整理する自分用の集計・可視化ツールです。税理士による個別の税務相談・申告書類の作成代行(税理士法第52条)にはあたらず、勘定科目・所得区分の最終判断は行いません。表示される分類はあくまで一般的な目安であり、実際の確定申告にあたっては国税庁の最新情報をご確認いただくか、税理士等の専門家にご相談ください。白色申告であっても記帳・帳簿の保存義務がある点にご注意ください。
+  </div>
+</header>
+
+<main>
+
+  <section class="card" id="year-section">
+    <h2>① 対象年度</h2>
+    <div class="row2">
+      <label class="field">
+        <span class="lbl">対象年度</span>
+        <input type="number" id="in-year" min="2000" max="2100" step="1">
+      </label>
+      <label class="field">
+        <span class="lbl">会社員等の給与収入があるか(任意メモ用)</span>
+        <select id="in-hasSalary">
+          <option value="no">給与収入はない(専業)</option>
+          <option value="yes">給与収入がある(副業として活動)</option>
+        </select>
+      </label>
+    </div>
+    <div class="note-box" id="salaryNote"></div>
+  </section>
+
+  <section class="card" id="event-input-section">
+    <h2>② イベントごとの売上・経費を入力 <span class="badge" id="edition-badge">FREE版: 3件まで</span></h2>
+    <p class="desc">即売会・オンリーイベント等、開催ごとに1件として登録してください。</p>
+
+    <div class="item-tab-row" id="eventTabs"></div>
+    <div id="eventForm"></div>
+  </section>
+
+  <section class="card" id="home-section">
+    <h2>③ 自宅作業スペースの家事按分(任意)</h2>
+    <p class="desc">自宅の一部を作業スペースとして使っている場合、家賃・光熱費・通信費の一部を経費として按分できます(所得税基本通達45-2、事業使用割合の根拠を別途記録してください)。</p>
+    <div class="row3">
+      <label class="field">
+        <span class="lbl">家賃(月額・円)</span>
+        <input type="number" id="in-rent" min="0" step="1000" value="0">
+      </label>
+      <label class="field">
+        <span class="lbl">光熱費(月額・円)</span>
+        <input type="number" id="in-utility" min="0" step="500" value="0">
+      </label>
+      <label class="field">
+        <span class="lbl">通信費(月額・円)</span>
+        <input type="number" id="in-comm" min="0" step="500" value="0">
+      </label>
+    </div>
+    <label class="field">
+      <span class="lbl">事業使用割合(%)</span>
+      <input type="number" id="in-homeRatio" min="0" max="100" step="1" value="0">
+    </label>
+  </section>
+
+  <section class="card" id="pro-section">
+    <h2>④ 複数イベント対応・複数年度保存 <span class="badge pro">買い切り版</span></h2>
+    <div class="locked-panel">
+      <p>買い切り版(ダウンロード購入)では、以下の機能が使えます:</p>
+      <ul class="feat-list">
+        <li>イベント登録件数の上限なし(年間何回参加しても集計可能)</li>
+        <li>年度ごとに入力内容をこのブラウザに保存し、翌年以降も呼び出して再利用</li>
+      </ul>
+      <a class="buy-btn" href="#" id="buyLink" target="_blank" rel="noopener">買い切り版を見る(BOOTH)</a>
+    </div>
+  </section>
+
+  <section class="card" id="history-section" style="display:none;">
+    <h2>⑤ 年度の保存</h2>
+    <div class="btn-row" style="margin-top:0;">
+      <button class="btn-secondary" id="saveBtn">現在の内容をこのブラウザに保存</button>
+      <button class="btn-secondary" id="loadBtn">保存済みの内容を読み込む</button>
+    </div>
+    <p class="desc" id="saveStatus" style="margin:8px 0 0;"></p>
+  </section>
+
+  <section class="card" id="summary-section">
+    <h2>⑥ 年間集計サマリー</h2>
+    <table class="summary" id="summaryTable"></table>
+    <div class="amount-box">
+      <div>
+        <div class="label">年間収入合計</div>
+        <div class="value" id="totalIncome">¥0</div>
+      </div>
+      <div>
+        <div class="label">年間経費合計</div>
+        <div class="value" id="totalExpense">¥0</div>
+      </div>
+      <div>
+        <div class="label">差引(参考)</div>
+        <div class="value" id="totalNet">¥0</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="doc-section">
+    <h2>⑦ 集計結果(テキスト・印刷用)</h2>
+    <div class="doc-box" id="docBox"></div>
+    <div class="btn-row">
+      <button class="btn-secondary" id="printBtn">🖨️ 集計結果を印刷 / PDF保存</button>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <p><span class="updated">最終更新: 2026年9月時点の国税庁公表情報・一般的な実務慣行を参考に作成。税制は年度により変わるため、最新情報は国税庁ウェブサイトでご確認ください。</span></p>
+  <p>給与所得者の副業の場合、給与以外の所得(収入から必要経費を差し引いた額)が年間20万円を超えると所得税の確定申告が必要になるのが一般的な目安です(住民税の申告は所得税とは別に必要な場合があります)。専業の場合は基礎控除額との比較になり、基礎控除額は税制改正により年度ごとに異なります。正確な金額・要否は国税庁の最新情報でご確認ください。</p>
+  <p>本ツールは完全にブラウザ内で動作し、入力した金額情報はどこにも送信されません(開発者ツールのネットワークタブで通信が発生しないことをご確認いただけます)。</p>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var EDITION = "free"; // "full" で買い切り完全版
+  var MAX_EVENTS = EDITION === "full" ? 99 : 3;
+
+  var EXPENSE_FIELDS = [
+    ["boothFee", "参加費(スペース代)"],
+    ["travel", "交通費"],
+    ["lodging", "宿泊費"],
+    ["printing", "印刷費"],
+    ["shipping", "郵送費・宅配便料金"],
+    ["packaging", "梱包資材費"],
+    ["paymentFee", "決済手数料(キャッシュレス決済等)"],
+    ["otherLabel", "その他経費(自由記述)"]
+  ];
+
+  function esc(s) { return (s || "").toString().replace(/[<>&"']/g, function (c) { return { "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+
+  function makeKeyboardClickable(el) {
+    el.tabIndex = 0;
+    el.setAttribute("role", "button");
+    el.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); el.click(); }
+    });
+  }
+
+  function fmtYen(n) { return "¥" + Math.round(n || 0).toLocaleString(); }
+  function num(v) { var n = parseFloat(v); return isFinite(n) ? n : 0; }
+
+  function newEvent() {
+    return {
+      id: Date.now() + "-" + Math.random().toString(36).slice(2, 7),
+      name: "", date: "",
+      cashSales: "", consignmentSales: "",
+      boothFee: "", travel: "", lodging: "", printing: "", printingSoldRatio: "100",
+      shipping: "", packaging: "", paymentFee: "",
+      otherLabel: "", otherAmount: ""
+    };
+  }
+
+  var events = [newEvent()];
+  var activeEventId = events[0].id;
+
+  function getActiveEvent() {
+    for (var i = 0; i < events.length; i++) if (events[i].id === activeEventId) return events[i];
+    return events[0];
+  }
+
+  function renderTabs() {
+    var el = document.getElementById("eventTabs");
+    el.innerHTML = "";
+    events.forEach(function (e, i) {
+      var tab = document.createElement("div");
+      tab.className = "item-tab" + (e.id === activeEventId ? " active" : "");
+      tab.textContent = e.name || ("イベント" + (i + 1));
+      tab.addEventListener("click", function () { activeEventId = e.id; renderTabs(); renderForm(); renderAll(); });
+      makeKeyboardClickable(tab);
+      el.appendChild(tab);
+    });
+    if (events.length < MAX_EVENTS) {
+      var add = document.createElement("div");
+      add.className = "item-tab";
+      add.textContent = "+ イベントを追加";
+      add.addEventListener("click", function () {
+        var ne = newEvent(); events.push(ne); activeEventId = ne.id; renderTabs(); renderForm(); renderAll();
+      });
+      makeKeyboardClickable(add);
+      el.appendChild(add);
+    } else if (EDITION !== "full") {
+      var lock = document.createElement("div");
+      lock.className = "item-tab";
+      lock.style.opacity = ".5";
+      lock.textContent = "🔒 4件目以降は買い切り版";
+      el.appendChild(lock);
+    }
+    if (events.length > 1) {
+      var del = document.createElement("button");
+      del.className = "item-tab";
+      del.style.color = "#d0392b";
+      del.textContent = "選択中のイベントを削除";
+      del.addEventListener("click", function () {
+        events = events.filter(function (e) { return e.id !== activeEventId; });
+        activeEventId = events[0].id;
+        renderTabs(); renderForm(); renderAll();
+      });
+      el.appendChild(del);
+    }
+  }
+
+  function field(labelText, inputHtml) {
+    return '<label class="field"><span class="lbl">' + labelText + '</span>' + inputHtml + '</label>';
+  }
+
+  function renderForm() {
+    var e = getActiveEvent();
+    var el = document.getElementById("eventForm");
+
+    var html =
+      '<div class="row2">' +
+        field("イベント名", '<input id="f-name" value="' + esc(e.name) + '" placeholder="例) 第◯回 △△オンリー">') +
+        field("開催日", '<input id="f-date" type="date" value="' + esc(e.date) + '">') +
+      '</div>' +
+      '<div class="row2">' +
+        field("即売会当日の現金売上(円)", '<input id="f-cashSales" type="number" min="0" step="100" value="' + esc(e.cashSales) + '">') +
+        field("委託販売分の売上(手数料控除後・円、任意)", '<input id="f-consignmentSales" type="number" min="0" step="100" value="' + esc(e.consignmentSales) + '">') +
+      '</div>' +
+      '<div class="row4">' +
+        field("参加費(円)", '<input id="f-boothFee" type="number" min="0" step="100" value="' + esc(e.boothFee) + '">') +
+        field("交通費(円)", '<input id="f-travel" type="number" min="0" step="100" value="' + esc(e.travel) + '">') +
+        field("宿泊費(円)", '<input id="f-lodging" type="number" min="0" step="100" value="' + esc(e.lodging) + '">') +
+        field("印刷費(円)", '<input id="f-printing" type="number" min="0" step="100" value="' + esc(e.printing) + '">') +
+      '</div>' +
+      '<div class="note-box">印刷費は、実務上「完売した部数の分のみ」を経費として計上するのが一般的とされています(売れ残り分は在庫として扱われることがあります)。下の「完売比率」で調整できます。</div>' +
+      '<div class="row2">' +
+        field("うち完売した比率(%、目安)", '<input id="f-printingSoldRatio" type="number" min="0" max="100" step="1" value="' + esc(e.printingSoldRatio) + '">') +
+        '<div></div>' +
+      '</div>' +
+      '<div class="row4">' +
+        field("郵送費・宅配便(円)", '<input id="f-shipping" type="number" min="0" step="100" value="' + esc(e.shipping) + '">') +
+        field("梱包資材費(円)", '<input id="f-packaging" type="number" min="0" step="100" value="' + esc(e.packaging) + '">') +
+        field("決済手数料(円)", '<input id="f-paymentFee" type="number" min="0" step="100" value="' + esc(e.paymentFee) + '">') +
+      '</div>' +
+      '<div class="row2">' +
+        field("その他経費の内容(自由記述)", '<input id="f-otherLabel" value="' + esc(e.otherLabel) + '" placeholder="例) カタログ掲載料">') +
+        field("その他経費の金額(円)", '<input id="f-otherAmount" type="number" min="0" step="100" value="' + esc(e.otherAmount) + '">') +
+      '</div>';
+
+    el.innerHTML = html;
+
+    Array.prototype.forEach.call(el.querySelectorAll("[id^=f-]"), function (input) {
+      var key = input.id.slice(2);
+      input.addEventListener("input", function () {
+        e[key] = input.value;
+        if (key === "name") renderTabs();
+        renderAll();
+      });
+    });
+  }
+
+  function eventTotals(e) {
+    var printingRatio = Math.max(0, Math.min(100, num(e.printingSoldRatio))) / 100;
+    var printingCost = num(e.printing) * (e.printingSoldRatio === "" ? 1 : printingRatio);
+    var income = num(e.cashSales) + num(e.consignmentSales);
+    var expense = num(e.boothFee) + num(e.travel) + num(e.lodging) + printingCost +
+      num(e.shipping) + num(e.packaging) + num(e.paymentFee) + num(e.otherAmount);
+    return { income: income, expense: expense, printingCost: printingCost };
+  }
+
+  function homeExpenseYear() {
+    var ratio = Math.max(0, Math.min(100, num(document.getElementById("in-homeRatio").value))) / 100;
+    var monthly = num(document.getElementById("in-rent").value) + num(document.getElementById("in-utility").value) + num(document.getElementById("in-comm").value);
+    return monthly * ratio * 12;
+  }
+
+  function renderSummaryTable() {
+    var table = document.getElementById("summaryTable");
+    var rows = ['<tr><th>イベント</th><th>開催日</th><th>収入</th><th>経費</th><th>差引</th></tr>'];
+    var totalIncome = 0, totalExpense = 0;
+    events.forEach(function (e) {
+      var t = eventTotals(e);
+      totalIncome += t.income; totalExpense += t.expense;
+      rows.push('<tr><td>' + esc(e.name || "(未入力)") + '</td><td>' + esc(e.date || "-") + '</td>' +
+        '<td class="num">' + fmtYen(t.income) + '</td><td class="num">' + fmtYen(t.expense) + '</td>' +
+        '<td class="num">' + fmtYen(t.income - t.expense) + '</td></tr>');
+    });
+    var home = homeExpenseYear();
+    if (home > 0) {
+      totalExpense += home;
+      rows.push('<tr><td colspan="3">自宅作業スペースの家事按分(年間)</td><td class="num">' + fmtYen(home) + '</td><td class="num">-</td></tr>');
+    }
+    rows.push('<tr class="total"><td colspan="2">年間合計</td><td class="num">' + fmtYen(totalIncome) + '</td><td class="num">' + fmtYen(totalExpense) + '</td><td class="num">' + fmtYen(totalIncome - totalExpense) + '</td></tr>');
+    table.innerHTML = rows.join("");
+
+    document.getElementById("totalIncome").textContent = fmtYen(totalIncome);
+    document.getElementById("totalExpense").textContent = fmtYen(totalExpense);
+    document.getElementById("totalNet").textContent = fmtYen(totalIncome - totalExpense);
+    return { totalIncome: totalIncome, totalExpense: totalExpense, home: home };
+  }
+
+  function renderDoc(sums) {
+    var year = document.getElementById("in-year").value || "(年度未入力)";
+    var lines = [];
+    lines.push("同人活動 収支・経費 集計結果(参考)");
+    lines.push("対象年度: " + year + "年");
+    lines.push("作成日: " + new Date().toLocaleDateString());
+    lines.push("");
+    events.forEach(function (e, i) {
+      var t = eventTotals(e);
+      lines.push("■ イベント" + (i + 1) + ": " + (e.name || "(未入力)") + (e.date ? "(" + e.date + ")" : ""));
+      lines.push("・収入: 現金売上 " + fmtYen(e.cashSales) + " + 委託販売 " + fmtYen(e.consignmentSales) + " = " + fmtYen(t.income));
+      lines.push("・経費: " + fmtYen(t.expense) + "(参加費/交通費/宿泊費/印刷費(完売比率調整後)/郵送費/梱包資材費/決済手数料/その他の合計)");
+      lines.push("");
+    });
+    if (sums.home > 0) {
+      lines.push("■ 自宅作業スペースの家事按分(年間): " + fmtYen(sums.home));
+      lines.push("");
+    }
+    lines.push("■ 年間合計");
+    lines.push("収入合計: " + fmtYen(sums.totalIncome));
+    lines.push("経費合計: " + fmtYen(sums.totalExpense));
+    lines.push("差引(参考): " + fmtYen(sums.totalIncome - sums.totalExpense));
+    lines.push("");
+    lines.push("※上記は入力内容に基づく単純な集計・可視化であり、勘定科目の確定や税務判断を行うものではありません。白色申告であっても記帳・帳簿の保存義務があります。給与所得者の副業の場合、給与以外の所得(収入-必要経費)が年間20万円を超えると所得税の確定申告が一般的に必要とされますが、正確な要否・金額(基礎控除額等、年度により変わります)は国税庁の最新情報をご確認いただくか、税理士等の専門家にご相談ください。");
+    document.getElementById("docBox").textContent = lines.join("\n");
+  }
+
+  function renderAll() {
+    var sums = renderSummaryTable();
+    renderDoc(sums);
+  }
+
+  function updateSalaryNote() {
+    var hasSalary = document.getElementById("in-hasSalary").value;
+    var note = hasSalary === "yes"
+      ? "給与以外の所得(収入-必要経費)が年間20万円を超えると、所得税の確定申告が一般的に必要とされます(住民税の申告は別途必要な場合があります)。正確な要否は国税庁の最新情報でご確認ください。"
+      : "専業の場合、所得が基礎控除額を超えると確定申告が必要になるのが一般的です。基礎控除額は税制改正により年度ごとに異なるため、国税庁の最新情報でご確認ください。";
+    document.getElementById("salaryNote").textContent = note;
+  }
+
+  document.getElementById("in-year").addEventListener("input", renderAll);
+  document.getElementById("in-hasSalary").addEventListener("change", function () { updateSalaryNote(); renderAll(); });
+  document.getElementById("in-rent").addEventListener("input", renderAll);
+  document.getElementById("in-utility").addEventListener("input", renderAll);
+  document.getElementById("in-comm").addEventListener("input", renderAll);
+  document.getElementById("in-homeRatio").addEventListener("input", renderAll);
+  document.getElementById("printBtn").addEventListener("click", function () { window.print(); });
+
+  document.getElementById("in-year").value = new Date().getFullYear();
+
+  document.getElementById("edition-badge").textContent = EDITION === "full" ? "買い切り版: イベント数無制限" : "FREE版: 3件まで";
+  if (EDITION === "full") {
+    document.getElementById("pro-section").style.display = "none";
+    document.getElementById("history-section").style.display = "block";
+  }
+
+  // ============ 保存(買い切り版) ============
+  var SAVE_KEY = "doujin_finance_visualizer_v1";
+  var saveBtn = document.getElementById("saveBtn");
+  var loadBtn = document.getElementById("loadBtn");
+  if (saveBtn) {
+    saveBtn.addEventListener("click", function () {
+      var data = {
+        year: document.getElementById("in-year").value,
+        hasSalary: document.getElementById("in-hasSalary").value,
+        rent: document.getElementById("in-rent").value,
+        utility: document.getElementById("in-utility").value,
+        comm: document.getElementById("in-comm").value,
+        homeRatio: document.getElementById("in-homeRatio").value,
+        events: events
+      };
+      try {
+        localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+        document.getElementById("saveStatus").textContent = "保存しました(" + new Date().toLocaleString() + ")";
+      } catch (e) {
+        document.getElementById("saveStatus").textContent = "保存に失敗しました(ブラウザの保存容量やプライベートブラウジング設定をご確認ください)。";
+      }
+    });
+    loadBtn.addEventListener("click", function () {
+      var raw;
+      try { raw = localStorage.getItem(SAVE_KEY); } catch (e) { document.getElementById("saveStatus").textContent = "読み込みに失敗しました。"; return; }
+      if (!raw) { document.getElementById("saveStatus").textContent = "保存されたデータがありません。"; return; }
+      try {
+        var data = JSON.parse(raw);
+        document.getElementById("in-year").value = data.year || new Date().getFullYear();
+        document.getElementById("in-hasSalary").value = data.hasSalary || "no";
+        document.getElementById("in-rent").value = data.rent || 0;
+        document.getElementById("in-utility").value = data.utility || 0;
+        document.getElementById("in-comm").value = data.comm || 0;
+        document.getElementById("in-homeRatio").value = data.homeRatio || 0;
+        if (Array.isArray(data.events) && data.events.length) {
+          events = data.events.map(function (e) {
+            var base = newEvent();
+            for (var k in base) { if (e && e[k] !== undefined) base[k] = e[k]; }
+            return base;
+          });
+          activeEventId = events[0].id;
+        }
+        updateSalaryNote();
+        renderTabs(); renderForm(); renderAll();
+        document.getElementById("saveStatus").textContent = "読み込みました。";
+      } catch (e) { document.getElementById("saveStatus").textContent = "読み込みに失敗しました。"; }
+    });
+  }
+
+  updateSalaryNote();
+  renderTabs();
+  renderForm();
+  renderAll();
+})();
+</script>
+</body>
+</html>
