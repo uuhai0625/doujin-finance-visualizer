@@ -116,7 +116,7 @@
 
   @media print {
     body { background: #fff; }
-    header, #event-input-section, #home-section, #pro-section { display: none !important; }
+    header, #year-section, #event-input-section, #home-section, #pro-section, #history-section { display: none !important; }
     #summary-section, #doc-section { border: none; padding: 0; }
     #summary-section .desc, #doc-section .desc, #printBtn { display: none !important; }
   }
@@ -206,7 +206,9 @@
 
   <section class="card" id="summary-section">
     <h2>⑥ 年間集計サマリー</h2>
-    <table class="summary" id="summaryTable"></table>
+    <div style="overflow-x:auto;">
+      <table class="summary" id="summaryTable"></table>
+    </div>
     <div class="amount-box">
       <div>
         <div class="label">年間収入合計</div>
@@ -268,7 +270,7 @@
   }
 
   function fmtYen(n) { return "¥" + Math.round(n || 0).toLocaleString(); }
-  function num(v) { var n = parseFloat(v); return isFinite(n) ? n : 0; }
+  function num(v) { var n = parseFloat(v); return isFinite(n) && n > 0 ? n : 0; }
 
   function newEvent() {
     return {
@@ -295,6 +297,7 @@
     events.forEach(function (e, i) {
       var tab = document.createElement("div");
       tab.className = "item-tab" + (e.id === activeEventId ? " active" : "");
+      tab.setAttribute("aria-selected", e.id === activeEventId ? "true" : "false");
       tab.textContent = e.name || ("イベント" + (i + 1));
       tab.addEventListener("click", function () { activeEventId = e.id; renderTabs(); renderForm(); renderAll(); });
       makeKeyboardClickable(tab);
